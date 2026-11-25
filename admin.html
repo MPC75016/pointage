@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d2b45">
+<meta name="robots" content="noindex">
+<title>Tableau de bord pointage — MADY PROCLEAN</title>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --navy:#0d2b45; --navy2:#16466e; --bg:#eef3f7; --card:#fff; --ink:#0d2b45; --muted:#5d7083; --line:#dbe4ec;
+    --green:#15803d; --green-bg:#dcfce7; --orange:#c2410c; --orange-bg:#ffedd5; --red:#b91c1c; --red-bg:#fee2e2;
+    --blue:#1d4ed8; --blue-bg:#dbeafe; --grey-bg:#eef2f6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+  .hidden{display:none!important}
+  header{background:var(--navy);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 18px 0}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:1150px;margin:0 auto}
+  .brand{font-weight:800;letter-spacing:.06em;font-size:16px}
+  .brand span{color:#7cc4f5}
+  .brand small{display:block;font-weight:500;letter-spacing:0;color:#a9c3d8;font-size:12px;margin-top:2px}
+  .hbtn{background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:10px;padding:9px 12px;font-size:14px;cursor:pointer;font-family:inherit;text-decoration:none;white-space:nowrap}
+  .tabs{display:flex;gap:4px;max-width:1150px;margin:14px auto 0;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{background:none;border:0;color:#a9c3d8;padding:11px 14px;font-size:15px;font-weight:600;border-bottom:3px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .tab.on{color:#fff;border-bottom-color:#7cc4f5}
+  .tab .n{display:inline-block;min-width:20px;padding:1px 6px;border-radius:999px;background:#c2410c;color:#fff;font-size:12px;margin-left:4px}
+  main{max-width:1150px;margin:0 auto;padding:14px 14px 50px}
+  .card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 1px 6px rgba(13,43,69,.07)}
+  h2{font-size:17px;margin:0 0 12px}
+  h2 .sub{font-weight:500;color:var(--muted);font-size:14px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+  .kpi{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 1px 6px rgba(13,43,69,.07)}
+  .kpi .v{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:13px;color:var(--muted);margin-top:2px}
+  .kpi.warn .v{color:var(--orange)} .kpi.bad .v{color:var(--red)} .kpi.good .v{color:var(--green)}
+  .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+  .filters label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+  input,select{width:100%;font:inherit;font-size:15px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+  .btn{border:0;border-radius:10px;padding:11px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+  .btn.pri{background:var(--navy);color:#fff}
+  .btn.sec{background:var(--grey-bg);color:var(--ink)}
+  .btn.sm{padding:8px 10px;font-size:13px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:14px;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+  td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;margin:1px 2px 1px 0}
+  .b-ok{background:var(--green-bg);color:var(--green)}
+  .b-warn{background:var(--orange-bg);color:var(--orange)}
+  .b-bad{background:var(--red-bg);color:var(--red)}
+  .b-info{background:var(--blue-bg);color:var(--blue)}
+  .b-grey{background:var(--grey-bg);color:var(--muted)}
+  .muted{color:var(--muted)}
+  .empty{color:var(--muted);text-align:center;padding:22px 8px}
+  .sites{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .site{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 1px 6px rgba(13,43,69,.07);display:flex;flex-direction:column}
+  .site h3{margin:0;font-size:16px}
+  .qr{width:180px;height:180px;margin:14px auto;display:flex;align-items:center;justify-content:center}
+  .qr img,.qr canvas{width:180px!important;height:180px!important}
+  .site .acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto}
+  .site .acts .full{grid-column:1/-1}
+  .login{max-width:380px;margin:60px auto}
+  .err{color:var(--red);background:var(--red-bg);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:14px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;z-index:9;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+  .row-flex{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .row-flex h2{margin:0}
+  .spin{width:30px;height:30px;border:4px solid #d6e2ec;border-top-color:var(--navy);border-radius:50%;margin:30px auto;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  /* Mobile : tableaux en cartes */
+  @media (max-width:760px){
+    table.resp thead{display:none}
+    table.resp, table.resp tbody, table.resp tr, table.resp td{display:block;width:100%}
+    table.resp tr{border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:10px;background:#fff}
+    table.resp td{border:0;padding:4px 0;display:flex;justify-content:space-between;gap:10px;text-align:right}
+    table.resp td::before{content:attr(data-l);color:var(--muted);font-size:13px;text-align:left;font-weight:600}
+    table.resp td.head{font-weight:700;font-size:15px;justify-content:flex-start;text-align:left;padding-bottom:6px}
+    table.resp td.head::before{display:none}
+    table.resp td.empty{justify-content:center}
+    table.resp td.empty::before{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- Connexion -->
+<div id="v-login" class="login">
+  <div class="card">
+    <div style="text-align:center;margin-bottom:10px">
+      <div class="brand" style="color:var(--navy)">MADY <span style="color:#1f8ad6">PROCLEAN</span></div>
+      <p class="muted" style="margin:6px 0 0">Tableau de bord du pointage</p>
+    </div>
+    <label class="muted" for="pwd" style="font-size:13px;font-weight:600">Mot de passe</label>
+    <input id="pwd" type="password" autocomplete="current-password" style="margin-top:6px">
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px" class="muted"><input type="checkbox" id="keep" style="width:auto"> Rester connectée sur cet appareil</label>
+    <div id="login-err" class="err hidden"></div>
+    <button class="btn pri" id="b-login" style="width:100%;margin-top:14px">Se connecter</button>
+  </div>
+</div>
+
+<!-- Application -->
+<div id="v-app" class="hidden">
+  <header>
+    <div class="top">
+      <div class="brand">MADY <span>PROCLEAN</span><small id="h-sub">Pointage des agents</small></div>
+      <div style="display:flex;gap:6px">
+        <button class="hbtn" id="b-refresh" title="Actualiser">↻</button>
+        <a class="hbtn" id="a-sheet" target="_blank" rel="noopener">Feuille</a>
+        <button class="hbtn" id="b-logout">Sortir</button>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-t="today">Aujourd'hui</button>
+      <button class="tab" data-t="hist">Historique</button>
+      <button class="tab" data-t="alerts">Alertes <span class="n hidden" id="n-alerts"></span></button>
+      <button class="tab" data-t="sites">Sites &amp; QR codes</button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="loading" class="spin hidden"></div>
+    <div id="app-err" class="err hidden" style="margin-bottom:12px"></div>
+
+    <!-- Aujourd'hui -->
+    <section id="t-today">
+      <div class="kpis" id="k-today"></div>
+      <div class="card">
+        <h2>Prévu aujourd'hui <span class="sub" id="today-sub"></span></h2>
+        <table class="resp" id="tb-prevus"><thead><tr><th>Agent</th><th>Site</th><th>Prévu</th><th>Arrivée</th><th>Départ</th><th>État</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card">
+        <h2>En poste maintenant</h2>
+        <table class="resp" id="tb-poste"><thead><tr><th>Agent</th><th>Site</th><th>Arrivé à</th><th>Depuis</th><th>Position</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Pointages hors planning aujourd'hui</h2>
+        <table class="resp" id="tb-hors"><thead><tr><th>Agent</th><th>Site</th><th>Arrivée</th><th>Départ</th><th>Position</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <!-- Historique -->
+    <section id="t-hist" class="hidden">
+      <div class="card">
+        <div class="chips" id="periods">
+          <button class="chip" data-p="today">Aujourd'hui</button>
+          <button class="chip" data-p="yesterday">Hier</button>
+          <button class="chip on" data-p="week">7 derniers jours</button>
+          <button class="chip" data-p="month">Ce mois</button>
+          <button class="chip" data-p="lastmonth">Mois dernier</button>
+        </div>
+        <div class="filters">
+          <div><label for="f-du">Du</label><input type="date" id="f-du"></div>
+          <div><label for="f-au">Au</label><input type="date" id="f-au"></div>
+          <div><label for="f-site">Site</label><select id="f-site"><option value="">Tous les sites</option></select></div>
+          <div><label for="f-agent">Agent</label><select id="f-agent"><option value="">Tous les agents</option></select></div>
+          <div><label for="f-type">Prestation</label><select id="f-type"><option value="">Toutes</option><option>Quotidien</option><option>Ponctuel</option><option value="hors">Hors planning</option></select></div>
+          <div><label for="f-stat">Afficher</label><select id="f-stat">
+            <option value="">Tout</option><option value="retard">Retards</option><option value="anticipe">Départs anticipés</option>
+            <option value="hz">Hors zone</option><option value="oubli">Pointage manquant</option><option value="anom">Toutes les anomalies</option></select></div>
+        </div>
+      </div>
+      <div class="kpis" id="k-hist"></div>
+      <div class="card">
+        <div class="row-flex"><h2>Détail des vacations <span class="sub" id="hist-sub"></span></h2><button class="btn sec sm" id="b-csv">⬇︎ Export Excel (CSV)</button></div>
+        <table class="resp" id="tb-hist"><thead><tr><th>Date</th><th>Agent</th><th>Site</th><th>Prévu</th><th>Arrivée</th><th>Départ</th><th>Durée</th><th>Statut</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Cumul par agent</h2>
+        <table class="resp" id="tb-cumul"><thead><tr><th>Agent</th><th>Vacations</th><th>Heures</th><th>Retards</th><th>Minutes de retard</th><th>Anomalies</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <!-- Alertes -->
+    <section id="t-alerts" class="hidden">
+      <div class="card">
+        <h2>Alertes <span class="sub" id="alerts-sub"></span></h2>
+        <table class="resp" id="tb-alerts"><thead><tr><th>Quand</th><th>Type</th><th>Agent</th><th>Site</th><th>Prévu</th><th>Détail</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <!-- Sites & QR -->
+    <section id="t-sites" class="hidden">
+      <div class="card">
+        <div class="row-flex"><h2>QR codes à afficher sur chaque site</h2><button class="btn pri sm" id="b-print-all">🖨 Imprimer toutes les affiches</button></div>
+        <p class="muted" style="margin:0;font-size:14px">Collez l'affiche à l'entrée du local. Le pointage n'est accepté que si le téléphone de l'agent est sur place (GPS) : une photo du QR code ne suffit pas pour pointer depuis chez soi. Pour corriger une position, ouvrez cette page sur le site et touchez « Utiliser ma position ici ».</p>
+      </div>
+      <div class="sites" id="sites"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var API = window.POINTAGE_API || '';
+  var $ = function(id){ return document.getElementById(id); };
+  var store = {
+    get: function(k){ try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch(e){ return null; } },
+    set: function(k,v,keep){ try { (keep ? localStorage : sessionStorage).setItem(k,v); } catch(e){} },
+    del: function(k){ try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch(e){} }
+  };
+  var pwd = store.get('mp_admin');
+  var D = null, tab = 'today', timer = null;
+  var BASE = new URL('./', location.href).href;
+
+  // ---------- Outils
+  function api(action, data){
+    return fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ action: action, pwd: pwd }, data || {})) })
+      .catch(function(){ throw new Error('Connexion impossible. Vérifiez internet.'); })
+      .then(function(r){ return r.json().catch(function(){ throw new Error('Réponse du serveur illisible (vérifiez l\'URL dans config.js et le déploiement).'); }); })
+      .then(function(j){ if (!j.ok) throw new Error(j.error || 'Erreur'); return j; });
+  }
+  function el(tag, attrs, kids){
+    var e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function(k){
+      if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'cls') e.className = attrs[k];
+      else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), attrs[k]);
+      else e.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function(c){ if (c != null) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function badge(txt, cls){ return el('span', { cls: 'badge ' + cls, text: txt }); }
+  function td(label, content, cls){
+    var t = el('td', { 'data-l': label, cls: cls || '' });
+    if (content == null || content === '') t.textContent = '—';
+    else if (Array.isArray(content)) { var w = el('span'); content.forEach(function(c){ if (c) w.appendChild(c); }); t.appendChild(w); }
+    else if (typeof content === 'string' || typeof content === 'number') t.textContent = String(content);
+    else t.appendChild(content);
+    return t;
+  }
+  function fill(tableId, rows, emptyTxt, cols){
+    var tb = $(tableId).querySelector('tbody'); tb.textContent = '';
+    if (!rows.length) { tb.appendChild(el('tr', null, [el('td', { cls: 'empty', colspan: String(cols || 6), text: emptyTxt })])); return; }
+    rows.forEach(function(r){ tb.appendChild(r); });
+  }
+  function dur(m){ if (m == null || m === '') return ''; m = Math.max(0, Math.round(+m)); return Math.floor(m/60) + 'h' + ('0'+(m%60)).slice(-2); }
+  function iso(d){ return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); }
+  function fr(isoD){ var p = isoD.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function toast(t){ var x = el('div', { cls: 'toast', text: t }); document.body.appendChild(x); setTimeout(function(){ x.remove(); }, 2600); }
+  function showErr(m){ var e = $('app-err'); e.textContent = m || ''; e.classList.toggle('hidden', !m); }
+  function zoneBadge(z, dist){
+    if (!z) return null;
+    if (z === 'Sur site') return badge('Sur site', 'b-ok');
+    if (z === 'HORS ZONE') return badge('Hors zone' + (dist != null ? ' · ' + (dist >= 1000 ? (dist/1000).toFixed(1).replace('.', ',') + ' km' : dist + ' m') : ''), 'b-bad');
+    return badge(z, 'b-grey');
+  }
+
+  // ---------- Statuts d'une vacation
+  function flags(v){
+    var f = [];
+    if (/Retard/.test(v.statutA)) f.push({ k: 'retard', t: 'Retard ' + (v.ecartA > 0 ? '+' + v.ecartA + ' min' : ''), c: 'b-warn' });
+    if (/Hors planning/.test(v.statutA)) f.push({ k: 'hors', t: 'Hors planning', c: 'b-info' });
+    if (v.statutA === 'Arrivée non pointée') f.push({ k: 'oubli', t: 'Arrivée non pointée', c: 'b-bad' });
+    if (/anticip/.test(v.statutD)) f.push({ k: 'anticipe', t: 'Départ anticipé ' + (v.ecartD != null ? v.ecartD + ' min' : ''), c: 'b-warn' });
+    if (v.statutD === 'Départ non pointé') f.push({ k: 'oubli', t: 'Départ non pointé', c: 'b-bad' });
+    if (v.zoneA === 'HORS ZONE' || v.zoneD === 'HORS ZONE') f.push({ k: 'hz', t: 'Hors zone', c: 'b-bad' });
+    if (v.enCours) f.push({ k: 'cours', t: 'En poste', c: 'b-info' });
+    if (!f.length) f.push({ k: 'ok', t: 'Conforme', c: 'b-ok' });
+    return f;
+  }
+  function isAnom(f){ return f.some(function(x){ return ['retard','anticipe','hz','oubli'].indexOf(x.k) !== -1; }); }
+
+  // ---------- Chargement
+  function setPeriod(p){
+    var now = new Date(), du = new Date(now), au = new Date(now);
+    if (p === 'yesterday') { du.setDate(du.getDate()-1); au = new Date(du); }
+    if (p === 'week') du.setDate(du.getDate()-6);
+    if (p === 'month') du = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (p === 'lastmonth') { du = new Date(now.getFullYear(), now.getMonth()-1, 1); au = new Date(now.getFullYear(), now.getMonth(), 0); }
+    $('f-du').value = iso(du); $('f-au').value = iso(au);
+    [].forEach.call(document.querySelectorAll('#periods .chip'), function(c){ c.classList.toggle('on', c.getAttribute('data-p') === p); });
+  }
+
+  function load(silent){
+    if (!silent) $('loading').classList.remove('hidden');
+    return api('admin', { du: $('f-du').value, au: $('f-au').value }).then(function(r){
+      D = r; showErr('');
+      $('a-sheet').href = r.feuille;
+      $('h-sub').textContent = 'Mis à jour à ' + r.maintenant;
+      fillSelects();
+      render();
+    }).catch(function(e){
+      if (/Mot de passe|essais/.test(e.message)) { logout(e.message); return; }
+      showErr(e.message);
+    }).then(function(){ $('loading').classList.add('hidden'); });
+  }
+
+  function fillSelects(){
+    [['f-site', D.sites.map(function(s){ return [s.id, s.nom]; }), 'Tous les sites'],
+     ['f-agent', D.agents.map(function(a){ return [a.id, a.nom]; }), 'Tous les agents']].forEach(function(x){
+      var s = $(x[0]), cur = s.value; s.textContent = '';
+      s.appendChild(el('option', { value: '', text: x[2] }));
+      x[1].sort(function(a,b){ return a[1].localeCompare(b[1], 'fr'); }).forEach(function(o){ s.appendChild(el('option', { value: o[0], text: o[1] })); });
+      s.value = cur;
+    });
+  }
+
+  function render(){
+    if (!D) return;
+    renderToday(); renderHist(); renderAlerts(); renderSites();
+    var nA = D.alertes.length;
+    $('n-alerts').textContent = nA; $('n-alerts').classList.toggle('hidden', !nA);
+  }
+
+  // ---------- Aujourd'hui
+  function renderToday(){
+    var pv = D.prevus;
+    var n = { prevus: pv.length, ok: 0, retard: 0, absent: 0, poste: D.enPoste.length };
+    pv.forEach(function(p){ if (p.arrivee) n.ok++; if (p.retard > 0) n.retard++; if (p.etat === 'Absent') n.absent++; });
+    var k = $('k-today'); k.textContent = '';
+    [[n.prevus, 'Prestations prévues', ''], [n.ok, 'Agents arrivés', 'good'], [n.retard, 'En retard', n.retard ? 'warn' : ''],
+     [n.absent, 'Absents / non pointés', n.absent ? 'bad' : ''], [n.poste, 'En poste maintenant', '']].forEach(function(x){
+      k.appendChild(el('div', { cls: 'kpi ' + x[2] }, [el('div', { cls: 'v', text: String(x[0]) }), el('div', { cls: 'l', text: x[1] })]));
+    });
+    $('today-sub').textContent = '· ' + fr(D.aujourdhui);
+
+    fill('tb-prevus', pv.map(function(p){
+      var etat;
+      if (p.etat === 'Absent') etat = badge('Absent / non pointé', 'b-bad');
+      else if (p.etat === 'À venir') etat = badge('À venir', 'b-grey');
+      else if (p.etat === 'En poste') etat = badge('En poste', 'b-info');
+      else etat = badge('Terminé', 'b-ok');
+      var extra = p.retard > 0 ? badge('Retard +' + p.retard + ' min', 'b-warn') : (p.arrivee ? badge('À l\'heure', 'b-ok') : null);
+      return el('tr', null, [
+        td('Agent', p.agent, 'head'), td('Site', p.site), td('Prévu', p.debut + (p.fin ? ' – ' + p.fin : '') + ' · ' + p.type.toLowerCase(), 'num'),
+        td('Arrivée', p.arrivee, 'num'), td('Départ', p.depart, 'num'), td('État', [etat, extra, p.zone === 'HORS ZONE' ? badge('Hors zone', 'b-bad') : null])
+      ]);
+    }), 'Aucune prestation au planning aujourd\'hui.');
+
+    var nowMs = Date.now();
+    fill('tb-poste', D.enPoste.map(function(v){
+      return el('tr', null, [td('Agent', v.agent, 'head'), td('Site', v.site), td('Arrivé à', v.arrivee, 'num'),
+        td('Depuis', dur((nowMs - v.arriveeTs) / 60000), 'num'), td('Position', zoneBadge(v.zoneA, v.distA))]);
+    }), 'Personne n\'est en poste en ce moment.', 5);
+
+    var hors = D.vacations.filter(function(v){ return v.date === D.aujourdhui && /Hors planning/.test(v.statutA); });
+    fill('tb-hors', hors.map(function(v){
+      return el('tr', null, [td('Agent', v.agent, 'head'), td('Site', v.site), td('Arrivée', v.arrivee, 'num'), td('Départ', v.depart || (v.enCours ? 'en poste' : ''), 'num'), td('Position', zoneBadge(v.zoneA, v.distA))]);
+    }), 'Aucun.', 5);
+  }
+
+  // ---------- Historique
+  function filtered(){
+    var site = $('f-site').value, ag = $('f-agent').value, ty = $('f-type').value, st = $('f-stat').value;
+    return D.vacations.filter(function(v){
+      if (site && v.siteId !== site) return false;
+      if (ag && v.agentId !== ag) return false;
+      if (ty === 'hors' && !/Hors planning/.test(v.statutA)) return false;
+      if (ty && ty !== 'hors' && v.type !== ty) return false;
+      if (st) {
+        var f = flags(v), keys = f.map(function(x){ return x.k; });
+        if (st === 'anom') return isAnom(f);
+        return keys.indexOf(st) !== -1;
+      }
+      return true;
+    }).slice().reverse();
+  }
+
+  function renderHist(){
+    var rows = filtered();
+    var tot = 0, ret = 0, retMin = 0, anti = 0, hz = 0, oubli = 0;
+    rows.forEach(function(v){
+      tot += v.duree || 0;
+      var f = flags(v);
+      f.forEach(function(x){ if (x.k === 'retard') { ret++; retMin += Math.max(0, v.ecartA || 0); } if (x.k === 'anticipe') anti++; if (x.k === 'hz') hz++; if (x.k === 'oubli') oubli++; });
+    });
+    var k = $('k-hist'); k.textContent = '';
+    [[rows.length, 'Vacations', ''], [dur(tot) || '0h00', 'Heures pointées', ''], [ret, 'Retards', ret ? 'warn' : ''],
+     [retMin + ' min', 'Cumul des retards', retMin ? 'warn' : ''], [anti, 'Départs anticipés', anti ? 'warn' : ''],
+     [hz, 'Hors zone', hz ? 'bad' : ''], [oubli, 'Pointages manquants', oubli ? 'bad' : '']].forEach(function(x){
+      k.appendChild(el('div', { cls: 'kpi ' + x[2] }, [el('div', { cls: 'v', text: String(x[0]) }), el('div', { cls: 'l', text: x[1] })]));
+    });
+    $('hist-sub').textContent = '· du ' + fr(D.du) + ' au ' + fr(D.au);
+
+    fill('tb-hist', rows.map(function(v){
+      var f = flags(v);
+      return el('tr', null, [
+        td('Date', fr(v.date), 'num'), td('Agent', v.agent, 'head'), td('Site', v.site),
+        td('Prévu', v.prevuDebut ? v.prevuDebut + ' – ' + v.prevuFin + ' · ' + v.type.toLowerCase() : 'hors planning', 'num'),
+        td('Arrivée', v.arrivee, 'num'), td('Départ', v.depart || (v.enCours ? 'en poste' : ''), 'num'), td('Durée', dur(v.duree), 'num'),
+        td('Statut', f.map(function(x){ return badge(x.t, x.c); }))
+      ]);
+    }), 'Aucune vacation pour ces filtres.', 8);
+
+    // Cumul par agent
+    var by = {};
+    rows.forEach(function(v){
+      var a = by[v.agentId] || (by[v.agentId] = { nom: v.agent, n: 0, min: 0, ret: 0, retMin: 0, anom: 0 });
+      a.n++; a.min += v.duree || 0;
+      var f = flags(v);
+      if (f.some(function(x){ return x.k === 'retard'; })) { a.ret++; a.retMin += Math.max(0, v.ecartA || 0); }
+      if (isAnom(f)) a.anom++;
+    });
+    var list = Object.keys(by).map(function(k){ return by[k]; }).sort(function(a,b){ return b.retMin - a.retMin || a.nom.localeCompare(b.nom, 'fr'); });
+    fill('tb-cumul', list.map(function(a){
+      return el('tr', null, [td('Agent', a.nom, 'head'), td('Vacations', a.n, 'num'), td('Heures', dur(a.min), 'num'),
+        td('Retards', a.ret ? badge(String(a.ret), 'b-warn') : '0'), td('Minutes de retard', a.retMin + ' min', 'num'),
+        td('Anomalies', a.anom ? badge(String(a.anom), 'b-bad') : '0')]);
+    }), 'Aucune donnée.');
+  }
+
+  function csv(){
+    var rows = filtered();
+    var head = ['Date','Agent','Site','Type','Prévu début','Prévu fin','Arrivée','Écart arrivée (min)','Zone arrivée','Départ','Écart départ (min)','Zone départ','Durée (h)','Durée (min)','Statut'];
+    var q = function(x){ x = x == null ? '' : String(x); return /[;"\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+    var lines = [head.join(';')].concat(rows.map(function(v){
+      return [fr(v.date), v.agent, v.site, v.type || 'Hors planning', v.prevuDebut, v.prevuFin, v.arrivee, v.ecartA, v.zoneA,
+        v.depart, v.ecartD, v.zoneD, dur(v.duree), v.duree, flags(v).map(function(x){ return x.t; }).join(' / ')].map(q).join(';');
+    }));
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = el('a', { href: URL.createObjectURL(blob), download: 'pointage_' + D.du + '_' + D.au + '.csv' });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // ---------- Alertes
+  function renderAlerts(){
+    $('alerts-sub').textContent = '· du ' + fr(D.du) + ' au ' + fr(D.au) + ' (période de l\'onglet Historique)';
+    fill('tb-alerts', D.alertes.map(function(a){
+      var c = /Absence|non pointé|hors zone/i.test(a.type) ? 'b-bad' : 'b-warn';
+      return el('tr', null, [td('Quand', a.quand, 'num'), td('Type', badge(a.type, c)), td('Agent', a.agent, 'head'), td('Site', a.site), td('Prévu', a.prevu, 'num'), td('Détail', a.detail)]);
+    }), 'Aucune alerte sur la période. 👍');
+  }
+
+  // ---------- Sites & QR
+  function siteUrl(s){ return BASE + '?s=' + encodeURIComponent(s.id) + '&k=' + encodeURIComponent(s.cle); }
+  function qrInto(box, text){
+    box.textContent = '';
+    if (window.QRCode) {
+      new QRCode(box, { text: text, width: 360, height: 360, colorDark: '#0d2b45', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      box.appendChild(el('img', { alt: 'QR code', src: 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=0&data=' + encodeURIComponent(text) }));
+    }
+  }
+  function qrSrc(box){
+    var c = box.querySelector('canvas'); if (c) { try { return c.toDataURL('image/png'); } catch(e){} }
+    var i = box.querySelector('img'); return i ? i.src : '';
+  }
+
+  function renderSites(){
+    var wrap = $('sites'); wrap.textContent = '';
+    if (!D.sites.length) { wrap.appendChild(el('div', { cls: 'card empty', text: 'Ajoutez vos sites dans l\'onglet « Sites » de la feuille Google.' })); return; }
+    D.sites.forEach(function(s){
+      var box = el('div', { cls: 'qr' });
+      var gps = s.lat != null ? badge('GPS OK · rayon ' + s.rayon + ' m', 'b-ok') : badge('Position GPS manquante', 'b-bad');
+      var card = el('div', { cls: 'site' }, [
+        el('h3', { text: s.nom }),
+        el('div', { cls: 'muted', style: 'font-size:13px;margin-top:2px', text: [s.client, s.adresse].filter(Boolean).join(' · ') || ' ' }),
+        el('div', { style: 'margin-top:8px' }, [gps, s.actif ? null : badge('Désactivé', 'b-grey')]),
+        s.cle ? box : el('p', { cls: 'err', text: 'Clé QR manquante : menu ⏱ Pointage > Compléter, dans la feuille.' }),
+        el('div', { cls: 'acts' }, [
+          el('button', { cls: 'btn pri sm', text: '🖨 Affiche', onclick: function(){ printPosters([{ s: s, src: qrSrc(box) }]); } }),
+          el('button', { cls: 'btn sec sm', text: '🔗 Copier le lien', onclick: function(){ copy(siteUrl(s)); } }),
+          el('button', { cls: 'btn sec sm full', text: '📍 Utiliser ma position ici', onclick: function(ev){ setPos(s, ev.target); } })
+        ])
+      ]);
+      wrap.appendChild(card);
+      if (s.cle) qrInto(box, siteUrl(s));
+    });
+  }
+
+  function copy(t){
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function(){ toast('Lien copié'); })
+      .catch(function(){ window.prompt('Copiez le lien :', t); });
+  }
+
+  function setPos(s, btn){
+    if (!navigator.geolocation) return toast('Localisation non disponible');
+    if (!confirm('Enregistrer votre position actuelle comme position du site « ' + s.nom + ' » ?\nÀ faire uniquement si vous êtes sur place.')) return;
+    btn.disabled = true; btn.textContent = 'Localisation…';
+    navigator.geolocation.getCurrentPosition(function(p){
+      if (p.coords.accuracy > 80) toast('Précision faible (' + Math.round(p.coords.accuracy) + ' m) — enregistrée quand même');
+      api('admin_position', { siteId: s.id, lat: p.coords.latitude, lng: p.coords.longitude }).then(function(){
+        toast('Position du site enregistrée'); load(true);
+      }).catch(function(e){ toast(e.message); btn.disabled = false; btn.textContent = '📍 Utiliser ma position ici'; });
+    }, function(){ toast('Position refusée ou introuvable'); btn.disabled = false; btn.textContent = '📍 Utiliser ma position ici'; },
+    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  }
+
+  function printPosters(list){
+    var w = window.open('', '_blank');
+    if (!w) return toast('Autorisez les fenêtres pop-up pour imprimer');
+    var esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"']/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); };
+    var pages = list.map(function(x){
+      return '<section class="p"><div class="brand">MADY <span>PROCLEAN</span></div>' +
+        '<h1>POINTAGE</h1><p class="site">' + esc(x.s.nom) + '</p>' +
+        '<img src="' + esc(x.src) + '" alt="QR code">' +
+        '<ol><li>Scannez ce QR code avec l\'appareil photo de votre téléphone</li>' +
+        '<li>Tapez votre code personnel</li>' +
+        '<li>Pointez votre <b>ARRIVÉE</b> en arrivant, votre <b>DÉPART</b> à la fin de la prestation</li></ol>' +
+        '<p class="foot">Localisation obligatoire : le pointage n\'est possible que sur place.</p></section>';
+    }).join('');
+    w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Affiches pointage</title><style>' +
+      '@page{size:A4;margin:14mm}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#0d2b45}' +
+      '.p{page-break-after:always;text-align:center;padding-top:6mm;min-height:250mm}' +
+      '.brand{font-weight:800;letter-spacing:.08em;font-size:26px}.brand span{color:#1f8ad6}' +
+      'h1{font-size:64px;letter-spacing:.06em;margin:14mm 0 2mm}.site{font-size:26px;margin:0 0 10mm;font-weight:700}' +
+      'img{width:105mm;height:105mm;image-rendering:pixelated;border:3mm solid #0d2b45;border-radius:6mm;padding:4mm}' +
+      'ol{text-align:left;max-width:150mm;margin:12mm auto 0;font-size:19px;line-height:1.6}' +
+      '.foot{margin-top:10mm;font-size:15px;color:#5d7083}</style></head><body>' + pages +
+      '<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>');
+    w.document.close();
+  }
+
+  // ---------- Navigation
+  function setTab(t){
+    tab = t;
+    [].forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === t); });
+    ['today','hist','alerts','sites'].forEach(function(x){ $('t-' + x).classList.toggle('hidden', x !== t); });
+  }
+
+  function start(){
+    $('v-login').classList.add('hidden'); $('v-app').classList.remove('hidden');
+    setPeriod('week');
+    load();
+    clearInterval(timer);
+    timer = setInterval(function(){ if (tab === 'today' && !document.hidden) load(true); }, 60000);
+  }
+  function logout(msg){
+    store.del('mp_admin'); pwd = null; clearInterval(timer);
+    $('v-app').classList.add('hidden'); $('v-login').classList.remove('hidden');
+    var e = $('login-err'); e.textContent = msg || ''; e.classList.toggle('hidden', !msg);
+  }
+
+  $('b-login').addEventListener('click', function(){
+    var v = $('pwd').value.trim(); if (!v) return;
+    var b = this; b.disabled = true; b.textContent = 'Connexion…';
+    pwd = v;
+    api('admin', {}).then(function(){
+      store.set('mp_admin', v, $('keep').checked);
+      $('login-err').classList.add('hidden');
+      start();
+    }).catch(function(e){ var x = $('login-err'); x.textContent = e.message; x.classList.remove('hidden'); pwd = null; })
+      .then(function(){ b.disabled = false; b.textContent = 'Se connecter'; });
+  });
+  $('pwd').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('b-login').click(); });
+  $('b-logout').addEventListener('click', function(){ logout(); });
+  $('b-refresh').addEventListener('click', function(){ load(); });
+  [].forEach.call(document.querySelectorAll('.tab'), function(b){ b.addEventListener('click', function(){ setTab(b.getAttribute('data-t')); }); });
+  [].forEach.call(document.querySelectorAll('#periods .chip'), function(c){ c.addEventListener('click', function(){ setPeriod(c.getAttribute('data-p')); load(); }); });
+  ['f-du','f-au'].forEach(function(id){ $(id).addEventListener('change', function(){
+    [].forEach.call(document.querySelectorAll('#periods .chip'), function(c){ c.classList.remove('on'); });
+    if ($('f-du').value && $('f-au').value) load();
+  }); });
+  ['f-site','f-agent','f-type','f-stat'].forEach(function(id){ $(id).addEventListener('change', renderHist); });
+  $('b-csv').addEventListener('click', csv);
+  $('b-print-all').addEventListener('click', function(){
+    var boxes = document.querySelectorAll('#sites .qr');
+    var withKey = D.sites.filter(function(s){ return s.cle; });
+    printPosters(withKey.map(function(s, i){ return { s: s, src: qrSrc(boxes[i]) }; }));
+  });
+
+  if (!API || API.indexOf('COLLER_ICI') !== -1) {
+    var e = $('login-err'); e.textContent = 'Renseignez d\'abord l\'URL du serveur dans config.js.'; e.classList.remove('hidden');
+  } else if (pwd) start();
+})();
+</script>
+</body>
+</html>
