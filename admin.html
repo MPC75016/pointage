@@ -163,6 +163,7 @@
       <button class="tab" data-t="hist">Historique</button>
       <button class="tab" data-t="alerts">Alertes <span class="n hidden" id="n-alerts"></span></button>
       <button class="tab" data-t="planning">Planning</button>
+      <button class="tab" data-t="rapport">Prévu / Réalisé</button>
       <button class="tab" data-t="sites">Sites &amp; QR codes</button>
     </nav>
   </header>
@@ -225,6 +226,45 @@
       <div class="card">
         <h2>Alertes <span class="sub" id="alerts-sub"></span></h2>
         <table class="resp" id="tb-alerts"><thead><tr><th>Quand</th><th>Type</th><th>Agent</th><th>Site</th><th>Prévu</th><th>Détail</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <!-- Rapport prévu / réalisé -->
+    <section id="t-rapport" class="hidden">
+      <div class="card">
+        <div class="pl-bar">
+          <div style="flex:0 0 auto">
+            <label class="muted" style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Voir</label>
+            <div class="seg" id="rp-seg"><button data-m="tous" class="on">Tout</button><button data-m="site">Restaurant</button><button data-m="agent">Agent</button></div>
+          </div>
+          <div id="rp-sel-w" class="hidden"><label class="muted" style="font-size:12px;font-weight:600;display:block;margin-bottom:4px" id="rp-sel-l">Restaurant</label><select id="rp-sel"></select></div>
+        </div>
+        <div class="chips" id="rp-periods" style="margin-top:12px">
+          <button class="chip" data-p="week">7 derniers jours</button>
+          <button class="chip on" data-p="month">Ce mois</button>
+          <button class="chip" data-p="lastmonth">Mois dernier</button>
+        </div>
+        <div class="filters">
+          <div><label for="rp-du">Du</label><input type="date" id="rp-du"></div>
+          <div><label for="rp-au">Au</label><input type="date" id="rp-au"></div>
+          <div><button class="btn pri" id="rp-go" style="width:100%">Afficher</button></div>
+        </div>
+      </div>
+      <div id="rp-out" class="hidden">
+        <div class="kpis" id="rp-kpis"></div>
+        <div class="card">
+          <div class="row-flex"><h2>Détail jour par jour <span class="sub" id="rp-sub"></span></h2>
+            <div style="display:flex;gap:6px"><button class="btn sec sm" id="rp-print">🖨 Imprimer</button><button class="btn sec sm" id="rp-csv">⬇︎ Excel (CSV)</button></div></div>
+          <div class="chips" id="rp-filt">
+            <button class="chip on" data-f="">Tout</button><button class="chip" data-f="Absent">Absents</button><button class="chip" data-f="Retard">Retards</button>
+            <button class="chip" data-f="Pointage incomplet">Pointages incomplets</button><button class="chip" data-f="Remplacé">Remplacés</button><button class="chip" data-f="Hors planning">Hors planning</button>
+          </div>
+          <table class="resp" id="tb-rp"><thead><tr><th>Date</th><th>Agent</th><th>Restaurant</th><th>Prévu</th><th>Arrivée</th><th>Départ</th><th>Durée</th><th>Statut</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="card">
+          <h2>Totaux par agent</h2>
+          <table class="resp" id="tb-rp-tot"><thead><tr><th>Agent</th><th>Prévus</th><th>Présents</th><th>Absents</th><th>Retards</th><th>Remplacés</th><th>Hors planning</th><th>Heures prévues</th><th>Heures pointées</th></tr></thead><tbody></tbody></table>
+        </div>
       </div>
     </section>
 
@@ -878,11 +918,125 @@
   $('pl-csv').addEventListener('click', csvPeriode);
   (function(){ var m = lundi(new Date()); $('pl-du').value = iso(m); $('pl-au').value = iso(addDays(m, 6)); })();
 
+
+  // ---------- Rapport prévu / réalisé
+  var RP = null, rpMode = 'tous', rpSel = '', rpFilt = '';
+  var RP_CLS = { 'Présent': 'b-ok', 'Retard': 'b-warn', 'Absent': 'b-bad', 'Pointage incomplet': 'b-warn', 'Remplacé': 'b-info', 'Hors planning': 'b-info', 'À venir': 'b-grey' };
+  function rpPeriod(p){
+    var now = new Date(), du = new Date(now), au = new Date(now);
+    if (p === 'week') du.setDate(du.getDate() - 6);
+    if (p === 'month') { du = new Date(now.getFullYear(), now.getMonth(), 1); au = new Date(now.getFullYear(), now.getMonth() + 1, 0); }
+    if (p === 'lastmonth') { du = new Date(now.getFullYear(), now.getMonth() - 1, 1); au = new Date(now.getFullYear(), now.getMonth(), 0); }
+    $('rp-du').value = iso(du); $('rp-au').value = iso(au);
+    [].forEach.call(document.querySelectorAll('#rp-periods .chip'), function(c){ c.classList.toggle('on', c.getAttribute('data-p') === p); });
+  }
+  function rpFillSel(){
+    var s = $('rp-sel'), cur = rpSel; s.textContent = '';
+    $('rp-sel-w').classList.toggle('hidden', rpMode === 'tous');
+    if (rpMode === 'tous' || !D) return;
+    $('rp-sel-l').textContent = rpMode === 'site' ? 'Restaurant' : 'Agent';
+    s.appendChild(el('option', { value: '', text: rpMode === 'site' ? 'Choisir un restaurant…' : 'Choisir un agent…' }));
+    var list = rpMode === 'site' ? D.sites.map(function(x){ return [x.id, x.nom]; }) : D.agents.map(function(x){ return [x.id, x.nom]; });
+    list.sort(function(a, b){ return a[1].localeCompare(b[1], 'fr'); }).forEach(function(o){ s.appendChild(el('option', { value: o[0], text: o[1] })); });
+    s.value = cur;
+  }
+  function rpLoad(){
+    if (rpMode !== 'tous' && !rpSel) return toast(rpMode === 'site' ? 'Choisissez un restaurant' : 'Choisissez un agent');
+    var b = $('rp-go'); b.disabled = true; b.textContent = 'Calcul…';
+    $('loading').classList.remove('hidden');
+    api('admin_rapport', { du: $('rp-du').value, au: $('rp-au').value, mode: rpMode, id: rpSel }).then(function(r){
+      RP = r; rpRender(); $('rp-out').classList.remove('hidden');
+    }).catch(function(e){ toast(e.message); })
+      .then(function(){ b.disabled = false; b.textContent = 'Afficher'; $('loading').classList.add('hidden'); });
+  }
+  function rpTitre(){
+    return rpMode === 'tous' ? 'Tous les restaurants' : (rpMode === 'site' ? nomSite(RP.id) : nomAgent(RP.id));
+  }
+  function rpRender(){
+    var L = RP.lignes;
+    var c = { prevus: 0, pres: 0, abs: 0, ret: 0, inc: 0, rem: 0, hors: 0, minP: 0, minT: 0 };
+    RP.totaux.forEach(function(t){ c.prevus += t.prevus; c.pres += t.presents; c.abs += t.absents; c.ret += t.retards; c.rem += t.remplaces; c.hors += t.hors; c.minP += t.minPrevues; c.minT += t.minTravail; });
+    L.forEach(function(l){ if (l.statut === 'Pointage incomplet') c.inc++; });
+    var k = $('rp-kpis'); k.textContent = '';
+    [[c.prevus, 'Créneaux prévus', ''], [c.pres, 'Présents', 'good'], [c.abs, 'Absents', c.abs ? 'bad' : ''], [c.ret, 'Retards', c.ret ? 'warn' : ''],
+     [c.inc, 'Pointages incomplets', c.inc ? 'warn' : ''], [c.rem, 'Remplacements', ''], [dur(c.minP) || '0h00', 'Heures prévues', ''], [dur(c.minT) || '0h00', 'Heures pointées', '']].forEach(function(x){
+      k.appendChild(el('div', { cls: 'kpi ' + x[2] }, [el('div', { cls: 'v', text: String(x[0]) }), el('div', { cls: 'l', text: x[1] })]));
+    });
+    $('rp-sub').textContent = '· ' + rpTitre() + ' · du ' + fr(RP.du) + ' au ' + fr(RP.au);
+    var rows = L.filter(function(l){ return !rpFilt || l.statut === rpFilt; });
+    fill('tb-rp', rows.map(function(l){
+      var st = [badge(l.statut + (l.statut === 'Retard' && l.retard ? ' +' + l.retard + ' min' : ''), RP_CLS[l.statut] || 'b-grey')];
+      if (l.note) st.push(el('div', { cls: 'muted', style: 'font-size:12px;margin-top:3px', text: l.note }));
+      return el('tr', null, [
+        td('Date', fr(l.date).slice(0, 5) + ' ' + JL[new Date(l.date + 'T12:00:00').getDay()].slice(0, 3).toLowerCase(), 'num'),
+        td('Agent', l.agent, 'head'), td('Restaurant', l.site), td('Prévu', l.prevu, 'num'),
+        td('Arrivée', l.arrivee, 'num'), td('Départ', l.depart, 'num'), td('Durée', dur(l.duree), 'num'), td('Statut', st)
+      ]);
+    }), 'Aucune ligne pour ce filtre.', 8);
+    fill('tb-rp-tot', RP.totaux.map(function(t){
+      return el('tr', null, [td('Agent', t.agent, 'head'), td('Prévus', t.prevus, 'num'), td('Présents', t.presents, 'num'),
+        td('Absents', t.absents ? badge(String(t.absents), 'b-bad') : '0'), td('Retards', t.retards ? badge(t.retards + ' (' + t.minRetard + ' min)', 'b-warn') : '0'),
+        td('Remplacés', t.remplaces, 'num'), td('Hors planning', t.hors, 'num'), td('Heures prévues', dur(t.minPrevues) || '0h00', 'num'), td('Heures pointées', dur(t.minTravail) || '0h00', 'num')]);
+    }), 'Aucune donnée.', 9);
+  }
+  function rpPrint(){
+    if (!RP) return;
+    var esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"']/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); };
+    var col = { 'Absent': '#b91c1c', 'Retard': '#c2410c', 'Pointage incomplet': '#c2410c', 'Remplacé': '#1d4ed8', 'Hors planning': '#1d4ed8', 'À venir': '#5d7083' };
+    var rows = RP.lignes.filter(function(l){ return !rpFilt || l.statut === rpFilt; }).map(function(l){
+      return '<tr><td>' + esc(fr(l.date)) + '</td><td>' + esc(l.agent) + '</td><td>' + esc(l.site) + '</td><td>' + esc(l.prevu) + '</td><td>' + esc(l.arrivee) + '</td><td>' + esc(l.depart) +
+        '</td><td>' + esc(dur(l.duree)) + '</td><td style="color:' + (col[l.statut] || '#15803d') + ';font-weight:bold">' + esc(l.statut + (l.statut === 'Retard' && l.retard ? ' +' + l.retard + ' min' : '')) + '</td><td class="m">' + esc(l.note) + '</td></tr>';
+    }).join('');
+    var tot = RP.totaux.map(function(t){
+      return '<tr><td>' + esc(t.agent) + '</td><td>' + t.prevus + '</td><td>' + t.presents + '</td><td>' + t.absents + '</td><td>' + t.retards + ' (' + t.minRetard + ' min)</td><td>' + t.remplaces + '</td><td>' + t.hors + '</td><td>' + esc(dur(t.minPrevues) || '0h00') + '</td><td>' + esc(dur(t.minTravail) || '0h00') + '</td></tr>';
+    }).join('');
+    var w = window.open('', '_blank'); if (!w) return toast('Autorisez les fenêtres pop-up pour imprimer');
+    w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Prévu / Réalisé</title><style>' +
+      '@page{size:A4 landscape;margin:10mm}body{font-family:Arial,Helvetica,sans-serif;color:#0d2b45;font-size:10.5px}h1{font-size:16px;margin:0}h2{font-size:13px;margin:16px 0 6px}' +
+      '.s{color:#5d7083;margin:3px 0 10px}table{width:100%;border-collapse:collapse}th{text-align:left;background:#0d2b45;color:#fff;padding:5px}td{padding:4px 5px;border-bottom:1px solid #dbe4ec;vertical-align:top}td.m{color:#5d7083}</style></head><body>' +
+      '<h1>MADY PROCLEAN — Prévu / Réalisé</h1><div class="s">' + esc(rpTitre()) + ' · du ' + esc(fr(RP.du)) + ' au ' + esc(fr(RP.au)) + (rpFilt ? ' · filtre : ' + esc(rpFilt) : '') + '</div>' +
+      '<h2>Totaux par agent</h2><table><tr><th>Agent</th><th>Prévus</th><th>Présents</th><th>Absents</th><th>Retards</th><th>Remplacés</th><th>Hors planning</th><th>H. prévues</th><th>H. pointées</th></tr>' + tot + '</table>' +
+      '<h2>Détail</h2><table><tr><th>Date</th><th>Agent</th><th>Restaurant</th><th>Prévu</th><th>Arrivée</th><th>Départ</th><th>Durée</th><th>Statut</th><th>Remarque</th></tr>' + rows + '</table>' +
+      '<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>');
+    w.document.close();
+  }
+  function rpCsv(){
+    if (!RP) return;
+    var q = function(x){ x = x == null ? '' : String(x); return /[;"\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+    var lines = [['Date', 'Jour', 'Agent', 'Restaurant', 'Prévu', 'Arrivée', 'Départ', 'Retard (min)', 'Durée', 'Durée (min)', 'Statut', 'Remarque'].join(';')];
+    RP.lignes.filter(function(l){ return !rpFilt || l.statut === rpFilt; }).forEach(function(l){
+      lines.push([fr(l.date), JL[new Date(l.date + 'T12:00:00').getDay()], l.agent, l.site, l.prevu, l.arrivee, l.depart, l.retard || '', dur(l.duree), l.duree == null ? '' : l.duree, l.statut, l.note].map(q).join(';'));
+    });
+    lines.push(''); lines.push(['Totaux par agent', 'Prévus', 'Présents', 'Absents', 'Retards', 'Minutes de retard', 'Remplacés', 'Hors planning', 'Heures prévues', 'Heures pointées'].join(';'));
+    RP.totaux.forEach(function(t){ lines.push([t.agent, t.prevus, t.presents, t.absents, t.retards, t.minRetard, t.remplaces, t.hors, dur(t.minPrevues) || '0h00', dur(t.minTravail) || '0h00'].map(q).join(';')); });
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = el('a', { href: URL.createObjectURL(blob), download: 'prevu_realise_' + rpTitre().replace(/[^A-Za-z0-9]+/g, '_') + '_' + RP.du + '_' + RP.au + '.csv' });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  [].forEach.call(document.querySelectorAll('#rp-seg button'), function(b){ b.addEventListener('click', function(){
+    rpMode = b.getAttribute('data-m'); rpSel = '';
+    [].forEach.call(document.querySelectorAll('#rp-seg button'), function(x){ x.classList.toggle('on', x === b); });
+    rpFillSel();
+  }); });
+  $('rp-sel').addEventListener('change', function(){ rpSel = this.value; });
+  [].forEach.call(document.querySelectorAll('#rp-periods .chip'), function(c){ c.addEventListener('click', function(){ rpPeriod(c.getAttribute('data-p')); }); });
+  ['rp-du', 'rp-au'].forEach(function(id){ $(id).addEventListener('change', function(){ [].forEach.call(document.querySelectorAll('#rp-periods .chip'), function(c){ c.classList.remove('on'); }); }); });
+  [].forEach.call(document.querySelectorAll('#rp-filt .chip'), function(c){ c.addEventListener('click', function(){
+    rpFilt = c.getAttribute('data-f');
+    [].forEach.call(document.querySelectorAll('#rp-filt .chip'), function(x){ x.classList.toggle('on', x === c); });
+    if (RP) rpRender();
+  }); });
+  $('rp-go').addEventListener('click', rpLoad);
+  $('rp-print').addEventListener('click', rpPrint);
+  $('rp-csv').addEventListener('click', rpCsv);
+  rpPeriod('month');
+
   // ---------- Navigation
   function setTab(t){
     tab = t;
     [].forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === t); });
-    ['today','hist','alerts','planning','sites'].forEach(function(x){ $('t-' + x).classList.toggle('hidden', x !== t); });
+    ['today','hist','alerts','planning','rapport','sites'].forEach(function(x){ $('t-' + x).classList.toggle('hidden', x !== t); });
+    if (t === 'rapport') rpFillSel();
     if (t === 'planning') { if (!PL) loadPlanning(); else renderPlanning(); }
   }
 
