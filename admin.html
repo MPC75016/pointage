@@ -73,6 +73,49 @@
   .row-flex h2{margin:0}
   .spin{width:30px;height:30px;border:4px solid #d6e2ec;border-top-color:var(--navy);border-radius:50%;margin:30px auto;animation:s 1s linear infinite}
   @keyframes s{to{transform:rotate(360deg)}}
+
+  /* Planning */
+  .pl-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+  .pl-bar > div{flex:1 1 180px}
+  .seg{display:inline-flex;background:var(--grey-bg);border-radius:10px;padding:3px}
+  .seg button{border:0;background:none;padding:8px 14px;border-radius:8px;font:inherit;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+  .wk-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 10px}
+  .wk-nav b{font-size:15px}
+  .wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+  .day{background:#f6f9fb;border-radius:12px;padding:8px;min-height:90px}
+  .day.today{outline:2px solid #7cc4f5}
+  .day h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .slot{background:#fff;border-left:4px solid var(--navy2);border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:13px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  .slot .h{font-weight:700;font-variant-numeric:tabular-nums}
+  .slot.tbd{border-left-color:#e3b505}
+  .slot.rep{border-left-color:var(--blue)}
+  .slot.off{opacity:.55;text-decoration:line-through}
+  .slot small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .rule{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+  .rule:last-child{border-bottom:0}
+  .rule .t{font-weight:600}
+  .rule .m{font-size:13px;color:var(--muted);margin-top:2px}
+  .rule .a{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .rule.inactive{opacity:.55}
+  .modal{position:fixed;inset:0;background:rgba(13,43,69,.45);z-index:20;display:flex;align-items:center;justify-content:center;padding:16px}
+  .modal .box{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:18px}
+  .modal h3{margin:0 0 12px}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fgrid .full{grid-column:1/-1}
+  .fgrid label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+  .days{display:flex;gap:6px;flex-wrap:wrap}
+  .days button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 11px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+  .days button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
+  @media (max-width:760px){
+    .wk{grid-template-columns:1fr}
+    .day{min-height:0}
+    .day.empty{display:none}
+    .fgrid{grid-template-columns:1fr}
+    .rule{flex-direction:column}
+    .rule .a{justify-content:flex-start}
+  }
   /* Mobile : tableaux en cartes */
   @media (max-width:760px){
     table.resp thead{display:none}
@@ -119,6 +162,7 @@
       <button class="tab on" data-t="today">Aujourd'hui</button>
       <button class="tab" data-t="hist">Historique</button>
       <button class="tab" data-t="alerts">Alertes <span class="n hidden" id="n-alerts"></span></button>
+      <button class="tab" data-t="planning">Planning</button>
       <button class="tab" data-t="sites">Sites &amp; QR codes</button>
     </nav>
   </header>
@@ -192,7 +236,69 @@
       </div>
       <div class="sites" id="sites"></div>
     </section>
+
+    <!-- Planning -->
+    <section id="t-planning" class="hidden">
+      <div class="card">
+        <div class="pl-bar">
+          <div style="flex:0 0 auto">
+            <label class="muted" style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Voir par</label>
+            <div class="seg"><button data-m="site" class="on">Restaurant</button><button data-m="agent">Agent</button></div>
+          </div>
+          <div><label class="muted" style="font-size:12px;font-weight:600;display:block;margin-bottom:4px" id="pl-sel-l">Restaurant</label><select id="pl-sel"></select></div>
+          <div style="flex:0 0 auto"><button class="btn pri" id="pl-add">+ Ajouter un créneau</button></div>
+        </div>
+        <div class="wk-nav">
+          <button class="btn sec sm" id="pl-prev">‹ Préc.</button>
+          <b id="pl-wk"></b>
+          <button class="btn sec sm" id="pl-next">Suiv. ›</button>
+        </div>
+        <div id="pl-grid" class="wk"></div>
+      </div>
+      <div class="card">
+        <div class="row-flex"><h2>Créneaux <span class="sub" id="pl-rules-sub"></span></h2></div>
+        <div id="pl-rules"></div>
+      </div>
+      <div class="card">
+        <h2>Imprimer / exporter une période</h2>
+        <div class="filters">
+          <div><label for="pl-du">Du</label><input type="date" id="pl-du"></div>
+          <div><label for="pl-au">Au</label><input type="date" id="pl-au"></div>
+          <div><button class="btn pri" id="pl-print" style="width:100%">🖨 Imprimer</button></div>
+          <div><button class="btn sec" id="pl-csv" style="width:100%">⬇︎ Excel (CSV)</button></div>
+        </div>
+      </div>
+    </section>
   </main>
+  <div class="modal hidden" id="pl-modal">
+    <div class="box">
+      <h3 id="f-title">Nouveau créneau</h3>
+      <div class="fgrid">
+        <div class="full"><label for="f-agent2">Agent</label><select id="f-agent2"></select></div>
+        <div class="full"><label for="f-site2">Restaurant</label><select id="f-site2"></select></div>
+        <div><label for="f-du2">À partir du</label><input type="date" id="f-du2"></div>
+        <div><label for="f-au2">Jusqu'au (facultatif)</label><input type="date" id="f-au2"></div>
+        <div class="full"><label>Jours</label>
+          <div class="days" id="f-days"></div>
+          <div class="hint">Même date de début et de fin = prestation ponctuelle (les jours sont alors ignorés).</div>
+        </div>
+        <div><label for="f-deb">Heure de début</label><input type="time" id="f-deb"></div>
+        <div><label for="f-fin">Heure de fin</label><input type="time" id="f-fin"></div>
+        <div class="full hint" style="margin-top:-4px">Laissez vide si l'horaire n'est pas encore connu.</div>
+        <div><label for="f-tol">Tolérance retard (min)</label><input type="number" id="f-tol" min="0" placeholder="5"></div>
+        <div><label for="f-actif">Statut</label><select id="f-actif"><option value="1">Actif</option><option value="0">Désactivé</option></select></div>
+        <div class="full"><label for="f-remp">Remplace (facultatif)</label><select id="f-remp"></select>
+          <div class="hint">Pendant la période, le titulaire n'est plus attendu sur ce restaurant : c'est le remplaçant qui l'est.</div></div>
+        <div class="full"><label for="f-rem">Remarque</label><input id="f-rem" maxlength="300" placeholder="ex. congés, vitres, remplacement…"></div>
+      </div>
+      <div id="f-err" class="err hidden"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn pri" id="f-save" style="flex:1">Enregistrer</button>
+        <button class="btn sec" id="f-cancel">Annuler</button>
+        <button class="btn sec hidden" id="f-del" style="color:var(--red)">Supprimer</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -509,11 +615,275 @@
     w.document.close();
   }
 
+
+  // ---------- Planning
+  var PL = null, plMode = 'site', plSel = '', plWeek = lundi(new Date()), plEdit = null, plDays = [];
+  var ORD = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+  var JN = { Lu:'Lun', Ma:'Mar', Me:'Mer', Je:'Jeu', Ve:'Ven', Sa:'Sam', Di:'Dim' };
+  var JL = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  function lundi(d){ d = new Date(d.getFullYear(), d.getMonth(), d.getDate()); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; }
+  function addDays(d, n){ var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function joursSet(v){
+    var s = String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    if (!s || /tous|7\s*\/\s*7|7j|tlj/.test(s)) return [0,1,2,3,4,5,6];
+    var m2 = { lu:1, ma:2, me:3, je:4, ve:5, sa:6, di:0 }, m1 = { l:1, j:4, v:5, s:6, d:0 };
+    var code = function(t){ t = t.trim(); if (m2[t.slice(0,2)] != null) return m2[t.slice(0,2)]; return m1[t] != null ? m1[t] : null; };
+    var out = [];
+    s.split(/[,;\/ ]+|\s+et\s+/).filter(Boolean).forEach(function(tok){
+      var parts = tok.split('-').filter(Boolean);
+      if (tok.indexOf('-') !== -1 && parts.length === 2) {
+        var a = code(parts[0]), b = code(parts[1]); if (a == null || b == null) return;
+        for (var i = 0; i < 7; i++) { out.push(a); if (a === b) break; a = (a + 1) % 7; }
+      } else { var c = code(tok); if (c != null) out.push(c); }
+    });
+    return out;
+  }
+  function joursCodes(v){ var set = joursSet(v); return ORD.filter(function(j, i){ return set.indexOf((i + 1) % 7) !== -1; }); }
+  function joursTxt(c){
+    if (c.type === 'Ponctuel') return 'le ' + fr(c.date || c.du);
+    if (/pr[ée]ciser/i.test(c.jours)) return 'jours à confirmer';
+    var j = joursCodes(c.jours); return j.length === 7 ? 'tous les jours' : j.map(function(x){ return JN[x].toLowerCase(); }).join(' ');
+  }
+  function periodeTxt(c){
+    if (c.type === 'Ponctuel') return '';
+    if (c.du && c.au) return 'du ' + fr(c.du) + ' au ' + fr(c.au);
+    if (c.du) return 'à partir du ' + fr(c.du);
+    if (c.au) return 'jusqu\'au ' + fr(c.au);
+    return 'sans date de fin';
+  }
+  function hTxt(c){ return c.debut ? c.debut + ' – ' + c.fin : 'Horaire à confirmer'; }
+  function nomAgent(id){ var a = (D && D.agents || []).filter(function(x){ return x.id === id; })[0]; return a ? a.nom : id; }
+  function nomSite(id){ var s = (D && D.sites || []).filter(function(x){ return x.id === id; })[0]; return s ? s.nom : id; }
+  function occ(iso){
+    var wd = new Date(iso + 'T12:00:00').getDay();
+    var v = PL.filter(function(c){
+      if (!c.actif) return false;
+      var ok = c.type === 'Ponctuel' ? c.date === iso : joursSet(c.jours).indexOf(wd) !== -1 && !/pr[ée]ciser/i.test(c.jours);
+      if (c.du && iso < c.du) ok = false;
+      if (c.au && iso > c.au) ok = false;
+      return ok;
+    });
+    var reps = v.filter(function(c){ return c.remplace; });
+    return v.map(function(c){
+      return { c: c, par: reps.filter(function(r){ return r !== c && r.remplace === c.agentId && r.siteId === c.siteId; })[0] || null };
+    });
+  }
+  function concerne(c){ return plMode === 'site' ? c.siteId === plSel : (c.agentId === plSel || c.remplace === plSel); }
+
+  function loadPlanning(){
+    $('loading').classList.remove('hidden');
+    return api('admin_planning').then(function(r){ PL = r.creneaux; renderPlanning(); })
+      .catch(function(e){ showErr(e.message); })
+      .then(function(){ $('loading').classList.add('hidden'); });
+  }
+
+  function fillPlSelect(){
+    var s = $('pl-sel'), cur = plSel; s.textContent = '';
+    $('pl-sel-l').textContent = plMode === 'site' ? 'Restaurant' : 'Agent';
+    s.appendChild(el('option', { value: '', text: plMode === 'site' ? 'Choisir un restaurant…' : 'Choisir un agent…' }));
+    var list = plMode === 'site' ? D.sites.map(function(x){ return [x.id, x.nom]; }) : D.agents.map(function(x){ return [x.id, x.nom]; });
+    list.sort(function(a, b){ return a[1].localeCompare(b[1], 'fr'); }).forEach(function(o){ s.appendChild(el('option', { value: o[0], text: o[1] })); });
+    s.value = cur;
+  }
+
+  function renderPlanning(){
+    if (!PL || !D) return;
+    fillPlSelect();
+    $('pl-wk').textContent = 'Semaine du ' + fr(iso(plWeek)) + ' au ' + fr(iso(addDays(plWeek, 6)));
+    var grid = $('pl-grid'); grid.textContent = '';
+    var rules = $('pl-rules'); rules.textContent = '';
+    if (!plSel) {
+      grid.appendChild(el('div', { cls: 'empty', style: 'grid-column:1/-1', text: 'Choisissez un restaurant ou un agent pour voir son planning.' }));
+      $('pl-rules-sub').textContent = '';
+      return;
+    }
+    var todayIso = iso(new Date());
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(plWeek, i), di = iso(d);
+      var items = occ(di).filter(function(o){ return concerne(o.c) || (o.par && concerne(o.par)); })
+        .filter(function(o){ return !(plMode === 'agent' && o.c.remplace === plSel && o.c.agentId !== plSel); })
+        .sort(function(a, b){ return (a.c.debut || '99') < (b.c.debut || '99') ? -1 : 1; });
+      var col = el('div', { cls: 'day' + (di === todayIso ? ' today' : '') + (items.length ? '' : ' empty') },
+        [el('h4', { text: JL[d.getDay()].slice(0, 3) + ' ' + fr(di).slice(0, 5) })]);
+      if (!items.length) col.appendChild(el('div', { cls: 'muted', style: 'font-size:12px', text: '—' }));
+      items.forEach(function(o){
+        var c = o.c;
+        var cls = 'slot' + (c.debut ? '' : ' tbd') + (c.remplace ? ' rep' : '') + (o.par ? ' off' : '');
+        var qui = plMode === 'site' ? nomAgent(c.agentId) : nomSite(c.siteId);
+        var sub = [];
+        if (c.remplace) sub.push('remplace ' + nomAgent(c.remplace));
+        if (o.par) sub.push('remplacé(e) par ' + nomAgent(o.par.agentId));
+        if (c.type === 'Ponctuel') sub.push('ponctuel');
+        col.appendChild(el('div', { cls: cls, onclick: function(){ openForm(c); } }, [
+          el('div', { cls: 'h', text: hTxt(c) }), el('div', { text: qui }), sub.length ? el('small', { text: sub.join(' · ') }) : null
+        ]));
+      });
+      grid.appendChild(col);
+    }
+    var list = PL.filter(concerne).sort(function(a, b){
+      var ka = plMode === 'site' ? nomAgent(a.agentId) : nomSite(a.siteId), kb = plMode === 'site' ? nomAgent(b.agentId) : nomSite(b.siteId);
+      return ka.localeCompare(kb, 'fr') || (a.debut || '99').localeCompare(b.debut || '99');
+    });
+    $('pl-rules-sub').textContent = '· ' + list.length + ' créneau' + (list.length > 1 ? 'x' : '');
+    if (!list.length) rules.appendChild(el('div', { cls: 'empty', text: 'Aucun créneau. Touchez « + Ajouter un créneau ».' }));
+    list.forEach(function(c){
+      var ended = c.au && c.au < todayIso;
+      var titre = (plMode === 'site' ? nomAgent(c.agentId) : nomSite(c.siteId));
+      var meta = [joursTxt(c), hTxt(c), periodeTxt(c)].filter(Boolean).join(' · ');
+      var badges = [];
+      if (!c.actif) badges.push(badge('Désactivé', 'b-grey'));
+      if (ended) badges.push(badge('Terminé', 'b-grey'));
+      if (c.remplace) badges.push(badge('Remplace ' + nomAgent(c.remplace), 'b-info'));
+      if (!c.debut) badges.push(badge('Horaire à confirmer', 'b-warn'));
+      rules.appendChild(el('div', { cls: 'rule' + (!c.actif || ended ? ' inactive' : '') }, [
+        el('div', null, [el('div', { cls: 't', text: titre }), el('div', { cls: 'm', text: meta }),
+          c.remarque && !/^(Jours et )?[Hh]oraire à confirmer$/.test(c.remarque) ? el('div', { cls: 'm', text: c.remarque.replace(/^(Jours et )?[Hh]oraire à confirmer — /, '') }) : null, badges.length ? el('div', { style: 'margin-top:4px' }, badges) : null]),
+        el('div', { cls: 'a' }, [
+          el('button', { cls: 'btn sec sm', text: 'Modifier', onclick: function(){ openForm(c); } }),
+          el('button', { cls: 'btn sec sm', text: 'Remplacer', onclick: function(){ openForm(null, { siteId: c.siteId, jours: c.jours, debut: c.debut, fin: c.fin, remplace: c.agentId, type: c.type, date: c.date }); } }),
+          el('button', { cls: 'btn sec sm', text: 'Arrêter', onclick: function(){ openForm(c, { stop: true }); } })
+        ])
+      ]));
+    });
+  }
+
+  function fillFormSelect(id, list, placeholder){
+    var s = $(id); s.textContent = '';
+    s.appendChild(el('option', { value: '', text: placeholder }));
+    list.slice().sort(function(a, b){ return a[1].localeCompare(b[1], 'fr'); }).forEach(function(o){ s.appendChild(el('option', { value: o[0], text: o[1] })); });
+  }
+  function renderDays(){
+    var w = $('f-days'); w.textContent = '';
+    ORD.forEach(function(j){
+      w.appendChild(el('button', { type: 'button', cls: plDays.indexOf(j) !== -1 ? 'on' : '', text: JN[j], onclick: function(){
+        var i = plDays.indexOf(j); if (i === -1) plDays.push(j); else plDays.splice(i, 1); renderDays(); } }));
+    });
+    w.appendChild(el('button', { type: 'button', text: 'Tous', onclick: function(){ plDays = plDays.length === 7 ? [] : ORD.slice(); renderDays(); } }));
+  }
+  function openForm(c, opt){
+    opt = opt || {};
+    plEdit = c ? c.id : null;
+    var agents = D.agents.map(function(x){ return [x.id, x.nom]; }), sites = D.sites.map(function(x){ return [x.id, x.nom]; });
+    fillFormSelect('f-agent2', agents, 'Choisir l\'agent…');
+    fillFormSelect('f-site2', sites, 'Choisir le restaurant…');
+    fillFormSelect('f-remp', agents, 'Personne (créneau normal)');
+    var src = c || opt;
+    $('f-agent2').value = c ? c.agentId : (plMode === 'agent' && !opt.remplace ? plSel : '');
+    $('f-site2').value = src.siteId || (plMode === 'site' ? plSel : '');
+    var du = c ? (c.type === 'Ponctuel' ? (c.date || c.du) : c.du) : (opt.type === 'Ponctuel' ? opt.date : '');
+    var au = c ? (c.type === 'Ponctuel' ? (c.date || c.au) : c.au) : (opt.type === 'Ponctuel' ? opt.date : '');
+    if (opt.stop) au = iso(new Date());
+    $('f-du2').value = du || ''; $('f-au2').value = au || '';
+    plDays = src.jours != null && src.jours !== '' ? joursCodes(src.jours) : (c ? ORD.slice() : ORD.slice(0, 6));
+    if (/pr[ée]ciser/i.test(src.jours || '')) plDays = [];
+    renderDays();
+    $('f-deb').value = src.debut || ''; $('f-fin').value = src.fin || '';
+    $('f-tol').value = c && c.tol !== '' ? c.tol : '';
+    $('f-actif').value = c && !c.actif ? '0' : '1';
+    $('f-remp').value = src.remplace || '';
+    $('f-rem').value = c ? c.remarque : (opt.remplace ? 'Remplacement' : '');
+    $('f-title').textContent = opt.stop ? 'Arrêter ce créneau' : (c ? 'Modifier le créneau' : (opt.remplace ? 'Remplacement de ' + nomAgent(opt.remplace) : 'Nouveau créneau'));
+    $('f-del').classList.toggle('hidden', !c);
+    $('f-err').classList.add('hidden');
+    $('pl-modal').classList.remove('hidden');
+    if (opt.stop) setTimeout(function(){ $('f-au2').focus(); }, 50);
+  }
+  function closeForm(){ $('pl-modal').classList.add('hidden'); }
+  function formErr(m){ var e = $('f-err'); e.textContent = m; e.classList.remove('hidden'); }
+  function saveForm(){
+    var c = {
+      id: plEdit || '', agentId: $('f-agent2').value, siteId: $('f-site2').value,
+      du: $('f-du2').value, au: $('f-au2').value, jours: plDays.slice(),
+      debut: $('f-deb').value, fin: $('f-fin').value, tol: $('f-tol').value,
+      actif: $('f-actif').value === '1', remplace: $('f-remp').value, remarque: $('f-rem').value.trim()
+    };
+    if (!c.agentId) return formErr('Choisissez l\'agent.');
+    if (!c.siteId) return formErr('Choisissez le restaurant.');
+    var b = $('f-save'); b.disabled = true; b.textContent = 'Enregistrement…';
+    api('admin_creneau', { creneau: c }).then(function(){
+      closeForm(); toast('Planning enregistré');
+      return loadPlanning().then(function(){ load(true); });
+    }).catch(function(e){ formErr(e.message); })
+      .then(function(){ b.disabled = false; b.textContent = 'Enregistrer'; });
+  }
+  function delForm(){
+    if (!plEdit || !confirm('Supprimer définitivement ce créneau du planning ?\nPour un agent qui part, préférez « Arrêter » (l\'historique reste).')) return;
+    api('admin_creneau_suppr', { id: plEdit }).then(function(){
+      closeForm(); toast('Créneau supprimé'); return loadPlanning().then(function(){ load(true); });
+    }).catch(function(e){ formErr(e.message); });
+  }
+
+  function lignesPeriode(){
+    var du = $('pl-du').value, au = $('pl-au').value;
+    if (!plSel) { toast('Choisissez d\'abord un restaurant ou un agent'); return null; }
+    if (!du || !au || au < du) { toast('Indiquez une période valide'); return null; }
+    var out = [], d = new Date(du + 'T12:00:00'), end = new Date(au + 'T12:00:00'), n = 0;
+    while (d <= end && n < 400) {
+      var di = iso(d);
+      occ(di).filter(function(o){ return concerne(o.c) && !o.par; })
+        .filter(function(o){ return !(plMode === 'agent' && o.c.remplace === plSel && o.c.agentId !== plSel); })
+        .sort(function(a, b){ return (a.c.debut || '99') < (b.c.debut || '99') ? -1 : 1; })
+        .forEach(function(o){
+          var c = o.c;
+          out.push([fr(di), JL[d.getDay()], hTxt(c), plMode === 'site' ? nomAgent(c.agentId) : nomSite(c.siteId),
+            (c.remplace ? 'Remplace ' + nomAgent(c.remplace) + (c.remarque ? ' — ' : '') : '') + (c.remarque && !/^Horaire à confirmer$/.test(c.remarque) ? c.remarque : '')]);
+        });
+      d.setDate(d.getDate() + 1); n++;
+    }
+    return out;
+  }
+  function printPeriode(){
+    var rows = lignesPeriode(); if (!rows) return;
+    var nom = plMode === 'site' ? nomSite(plSel) : nomAgent(plSel);
+    var esc = function(x){ return String(x == null ? '' : x).replace(/[&<>"']/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); };
+    var w = window.open('', '_blank'); if (!w) return toast('Autorisez les fenêtres pop-up pour imprimer');
+    var body = rows.length ? rows.map(function(r, i){
+      var newDay = i === 0 || rows[i - 1][0] !== r[0];
+      return '<tr class="' + (newDay ? 'nd' : '') + '"><td>' + (newDay ? esc(r[1]) + ' ' + esc(r[0]) : '') + '</td><td class="h">' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td><td class="m">' + esc(r[4]) + '</td></tr>';
+    }).join('') : '<tr><td colspan="4">Aucun créneau sur cette période.</td></tr>';
+    w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Planning ' + esc(nom) + '</title><style>' +
+      '@page{size:A4;margin:12mm}body{font-family:Arial,Helvetica,sans-serif;color:#0d2b45;font-size:12px}' +
+      'h1{font-size:18px;margin:0}.s{color:#5d7083;margin:4px 0 14px}table{width:100%;border-collapse:collapse}' +
+      'th{text-align:left;background:#0d2b45;color:#fff;padding:6px}td{padding:5px 6px;border-bottom:1px solid #dbe4ec;vertical-align:top}' +
+      'tr.nd td{border-top:2px solid #0d2b45}td.h{white-space:nowrap;font-weight:bold}td.m{color:#5d7083}</style></head><body>' +
+      '<h1>MADY PROCLEAN — Planning ' + esc(nom) + '</h1><div class="s">du ' + esc(fr($('pl-du').value)) + ' au ' + esc(fr($('pl-au').value)) + '</div>' +
+      '<table><tr><th>Jour</th><th>Horaire</th><th>' + (plMode === 'site' ? 'Agent' : 'Restaurant') + '</th><th>Remarque</th></tr>' + body + '</table>' +
+      '<script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>');
+    w.document.close();
+  }
+  function csvPeriode(){
+    var rows = lignesPeriode(); if (!rows) return;
+    var q = function(x){ x = x == null ? '' : String(x); return /[;"\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+    var head = ['Date', 'Jour', 'Horaire', plMode === 'site' ? 'Agent' : 'Restaurant', 'Remarque'];
+    var blob = new Blob(['﻿' + [head].concat(rows).map(function(r){ return r.map(q).join(';'); }).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var nom = (plMode === 'site' ? nomSite(plSel) : nomAgent(plSel)).replace(/[^A-Za-z0-9]+/g, '_');
+    var a = el('a', { href: URL.createObjectURL(blob), download: 'planning_' + nom + '_' + $('pl-du').value + '_' + $('pl-au').value + '.csv' });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  [].forEach.call(document.querySelectorAll('.seg button'), function(b){ b.addEventListener('click', function(){
+    plMode = b.getAttribute('data-m'); plSel = '';
+    [].forEach.call(document.querySelectorAll('.seg button'), function(x){ x.classList.toggle('on', x === b); });
+    renderPlanning();
+  }); });
+  $('pl-sel').addEventListener('change', function(){ plSel = this.value; renderPlanning(); });
+  $('pl-prev').addEventListener('click', function(){ plWeek = addDays(plWeek, -7); renderPlanning(); });
+  $('pl-next').addEventListener('click', function(){ plWeek = addDays(plWeek, 7); renderPlanning(); });
+  $('pl-add').addEventListener('click', function(){ openForm(null); });
+  $('f-cancel').addEventListener('click', closeForm);
+  $('f-save').addEventListener('click', saveForm);
+  $('f-del').addEventListener('click', delForm);
+  $('pl-modal').addEventListener('click', function(e){ if (e.target === this) closeForm(); });
+  $('pl-print').addEventListener('click', printPeriode);
+  $('pl-csv').addEventListener('click', csvPeriode);
+  (function(){ var m = lundi(new Date()); $('pl-du').value = iso(m); $('pl-au').value = iso(addDays(m, 6)); })();
+
   // ---------- Navigation
   function setTab(t){
     tab = t;
     [].forEach.call(document.querySelectorAll('.tab'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === t); });
-    ['today','hist','alerts','sites'].forEach(function(x){ $('t-' + x).classList.toggle('hidden', x !== t); });
+    ['today','hist','alerts','planning','sites'].forEach(function(x){ $('t-' + x).classList.toggle('hidden', x !== t); });
+    if (t === 'planning') { if (!PL) loadPlanning(); else renderPlanning(); }
   }
 
   function start(){
